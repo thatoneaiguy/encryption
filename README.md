@@ -1,106 +1,195 @@
-# GradientKey Encryption 🔐🎨
+# Steganographic Encryption System
 
-> A novel encryption system leveraging visually encoded color gradients as cryptographic keys.  
-> Combine art and cryptography — hide your AES keys in gradients, and secure your secrets with style.
-
----
-
-## Table of Contents
-
-- [Introduction](#introduction)  
-- [Concept & Design](#concept--design)  
-- [How It Works](#how-it-works)  
-- [Features](#features)  
-- [Security Considerations](#security-considerations)  
-- [Installation](#installation)  
-- [Usage](#usage)  
-- [Configuration](#configuration)  
-- [Development & Testing](#development--testing)  
-- [Limitations & Future Work](#limitations--future-work)  
-- [License](#license)  
-- [Acknowledgments](#acknowledgments)
-
----
-
-## Introduction
-
-Traditional encryption relies on secret keys stored or transmitted as strings. **GradientKey Encryption** innovates by embedding cryptographic keys into images — specifically, gradients made up of multiple colors — turning a key into a visual artifact. This blends cryptography with steganography and creative data encoding.
-
-Use it to:
-
-- Hide keys in images that look like normal colorful gradients  
-- Generate complex keys tied to user passwords and image content  
-- Encrypt and decrypt text securely with AES-256 underpinned by visual keys  
-
----
-
-## Concept & Design
-
-- **Gradient Image as Key Container**:  
-  A horizontally blended color gradient image contains multiple hidden salts and a 32-bit binary key encoded in pixel color channels.
-
-- **Salts & Obfuscation**:  
-  Multiple salts are embedded in separate horizontal bars in the image. The exact salt used is derived from a hash of the image size, colors count, and password, thwarting simple extraction.
-
-- **Key Derivation**:  
-  Using PBKDF2 with HMAC-SHA256 and the selected salt, a key hash seeds the gradient’s colors and the key binary embedding positions — binding the key tightly to both image and password.
-
-- **AES Encryption**:  
-  The extracted key binary is converted into an AES-256 key (SHA256 of numeric key). AES-CBC mode with random IV and PKCS7 padding encrypts/decrypts messages.
-
----
+## Overview
+This system combines steganography (hiding data in images) with strong cryptography to securely encrypt messages. The core innovation is using a dynamically generated gradient image as a cryptographic key carrier, where secrets are embedded in the image's pixel data using Least Significant Bit (LSB) techniques.
 
 ## How It Works
+### Key Components
+1. **Gradient Key Image**: A visually appealing gradient image generated from your password
+2. **Embedded Secrets**: Cryptographic salts and a 256-bit secret hidden in the image
+3. **Multi-Layer Encryption**: Combines PBKDF2 key stretching, AES-256 encryption, and HMAC authentication
 
-### Key Generation  
-1. Password + random salts → PBKDF2 hash → Seed hash  
-2. Generate 10 gradient colors based on seed hash  
-3. Create gradient image (800x100 px)  
-4. Embed salts as bits in top horizontal bars  
-5. Embed 32-bit binary key pseudo-randomly across pixels  
-6. Save gradient image (`gradient_output.png`)  
-
-### Encryption  
-1. Load gradient image + password  
-2. Extract salts, select correct salt by hashed parameters  
-3. Derive seed hash from password + selected salt  
-4. Extract binary key from pixels  
-5. Derive AES key from binary key  
-6. Generate random IV, encrypt plaintext using AES-CBC with PKCS7  
-7. Save encrypted file (`encrypted_message.bin`) as [IV + ciphertext]  
-
-### Decryption  
-- Reverse the encryption process: extract AES key from gradient image + password, then decrypt the encrypted file.
+### Security Features
+- **256-bit Security**: Military-grade encryption standards
+- **Tamper Detection**: HMAC-SHA512 authentication prevents ciphertext modification
+- **Memory Protection**: Sensitive data securely wiped after use
+- **Password Hardening**: 600,000 PBKDF2 iterations
 
 ---
 
-## Features
+### 1. Image Generation
+```mermaid
+graph TD
+    A[Password] --> B[Generate Random Salts]
+    B --> C[Select Salt Based on Password]
+    A --> D[Derive Seed Hash]
+    C --> D
+    D --> E[Generate Color Palette]
+    E --> F[Create Gradient Image]
+    F --> G[Embed Salts in Image]
+    F --> H[Embed 256-bit Secret]
+    G --> I[Save Key Image]
+    H --> I 
+```
 
-- 🔑 **Visually encoded AES key** in a colorful gradient  
-- 🧂 Multiple embedded salts to prevent reverse-engineering  
-- 🔒 AES-256 CBC encryption with PKCS7 padding  
-- 🖼️ Image-based key sharing — passwords alone won’t decrypt  
-- 🔍 Pseudo-random embedding for subtle, hard-to-detect key bits  
-- ⚙️ Easy-to-run all-in-one Python script (generate, encrypt, decrypt)  
+### 2. Encryption Process
+```mermaid
+graph LR
+    A[Plaintext] --> B[Encryption]
+    C[Password] --> D[Key Derivation]
+    E[Key Image] --> D
+    D --> B
+    B --> F[Ciphertext]
+    D --> G[HMAC Authentication]
+    F --> G
+    G --> H[Secured Message]
+```
+
+### 3. Decryption Process
+```mermaid
+graph LR
+    A[Secured Message] --> B[HMAC Verification]
+    B --> C[Decryption]
+    D[Password] --> E[Key Derivation]
+    F[Key Image] --> E
+    E --> C
+    C --> G[Plaintext]
+```
 
 ---
 
-## Security Considerations
+# Usage Guide
 
-> ⚠️ This project is a **proof-of-concept** and should not be used for critical production data without thorough security review.
+## Prerequisites
 
-- The strength depends heavily on the password and securely keeping the gradient image.  
-- Salts and random embedding make key extraction hard but not impossible with advanced analysis.  
-- The 32-bit embedded key binary might be brute forced with enough computing power — consider expanding or varying size.  
-- AES key derivation uses PBKDF2 with 100,000 iterations — secure but adjustable for your needs.
+- Python 3.8+
 
----
-
-## Installation
-
-Ensure you have Python 3.8+ installed.
-
-Install dependencies:
+### Install dependencies:
 
 ```bash
 pip install pillow pycryptodome
+```
+
+---
+
+## Generating a Key Image
+
+```python
+from stego_crypto import generate_gradient_key_image
+
+password = "YourStrongPassword123!"
+output_path = "secure_gradient.png"
+generate_gradient_key_image(password, output_path)
+```
+
+---
+
+## Encrypting a Message
+
+```python
+from stego_crypto import encrypt_text_to_file
+
+plaintext = "Top secret message"
+image_path = "secure_gradient.png"
+output_file = "encrypted.sec"
+encrypt_text_to_file(plaintext, password, image_path, output_file)
+```
+
+---
+
+## Decrypting a Message
+
+```python
+from stego_crypto import decrypt_text_from_file
+
+decrypted = decrypt_text_from_file(image_path, password, output_file)
+print("Decrypted message:", decrypted)
+```
+
+---
+
+# Security Best Practices
+
+- **Use Strong Passwords:** Minimum 12 characters with mixed character sets  
+- **Rotate Key Images:** Generate new images for important communications  
+- **Secure Storage:** Keep key images separate from encrypted files  
+- **Secure Deletion:** Destroy key images after use for forward secrecy  
+- **Limit Exposure:** Decrypt messages in secure environments only  
+
+---
+
+# Technical Specifications
+
+## Cryptographic Parameters
+
+| Component         | Specification           |
+|-------------------|-------------------------|
+| Key Size          | 256-bit                 |
+| Encryption        | AES-256-CBC             |
+| Authentication    | HMAC-SHA512             |
+| Key Derivation    | PBKDF2-HMAC-SHA256 (600k iterations) |
+| Key Expansion     | HKDF-SHA512             |
+| Salt Size         | 32 bytes                |
+| Image Secret      | 32 bytes (256-bit)      |
+
+## Image Specifications
+
+| Parameter         | Value                   |
+|-------------------|-------------------------|
+| Image Size        | 800 x 300 px            |
+| Salt Bar Height   | 32 px                   |
+| Number of Salts   | 4                       |
+| Color Sections    | 10                      |
+| LSB Channels      | Blue channel            |
+
+---
+
+# Threat Model
+
+## Protected Against:
+
+- Brute-force attacks (256-bit security)  
+- Ciphertext tampering (HMAC authentication)  
+- Rainbow table attacks (unique per-image salts)  
+- Memory scraping (secure wiping)  
+- Known-plaintext attacks  
+
+## Potential Vulnerabilities:
+
+- **Weak Passwords:** System security depends on password strength  
+- **Image Modification:** Tampered images will break decryption  
+- **Physical Access:** Attackers with device access may extract keys  
+- **Side-channel Attacks:** Not fully protected against timing attacks  
+
+---
+
+# Frequently Asked Questions
+
+**Q:** Why use images for cryptography?  
+**A:** Images provide plausible deniability and add an extra layer of obscurity while carrying cryptographic material.  
+
+**Q:** Can I use the same image multiple times?  
+**A:** Yes, but for maximum security, generate a new image for each message.  
+
+**Q:** How secure is this compared to standard encryption?  
+**A:** When used with strong passwords, it provides security equivalent to AES-256 with additional steganographic protection.  
+
+**Q:** What happens if I lose the key image?  
+**A:** Without the exact key image used during encryption, decryption is impossible.  
+
+**Q:** Can I use this for large files?  
+**A:** The system is designed for text messages. For large files, consider hybrid encryption.  
+
+---
+
+# License
+
+This project is licensed under the **MIT License**.  
+Commercial use requires additional permissions.  
+
+---
+
+# Security Disclosures
+
+To report security vulnerabilities, please contact: **security@example.com**  
+We operate a responsible disclosure policy.
